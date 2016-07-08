@@ -1,3 +1,5 @@
+// Downloads all links subreddit names using a sitemap, and stores it to stdout
+// stderr is used for logging
 // sitemap link can be found from https://www.reddit.com/robots.txt
 var rootSitemap = 'http://reddit-sitemaps.s3-website-us-east-1.amazonaws.com/subreddit-sitemaps.xml';
 
@@ -45,8 +47,7 @@ function getAllSiteMaps(callback) {
 
   function parseRootSitemap(stringBuffer) {
     var content = stringBuffer.toString();
-    var match;
-    while(match = siteMapRe.exec(content)) {
+    while(var match = siteMapRe.exec(content)) {
       all.push(match[1]);
     }
 

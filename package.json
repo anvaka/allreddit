@@ -15,7 +15,9 @@
   "author": "Andrei Kashcha",
   "license": "MIT",
   "dependencies": {
+    "JSONStream": "^1.1.3",
     "concat-stream": "^1.5.1",
+    "event-stream": "^3.3.3",
     "request": "^2.72.0"
   }
 }
