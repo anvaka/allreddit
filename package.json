@@ -1,0 +1,21 @@
+{
+  "name": "allredit",
+  "version": "1.0.0",
+  "description": "Builds a graph of the entire reddit",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "reddit",
+    "crawler",
+    "graph",
+    "ngraph"
+  ],
+  "author": "Andrei Kashcha",
+  "license": "MIT",
+  "dependencies": {
+    "concat-stream": "^1.5.1",
+    "request": "^2.72.0"
+  }
+}
