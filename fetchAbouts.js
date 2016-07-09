@@ -85,6 +85,9 @@ function download(chunk, chunkDone) {
     request(link, function(err, response, body) {
       finished += 1;
       if (err) {
+        if (err.code === 'ETIMEDOUT') {
+          if(retry()) return;
+        }
         console.error('!!!', err);
         throw new Error('Failed to download ' + link);
       }
@@ -94,16 +97,9 @@ function download(chunk, chunkDone) {
           reportIfDone();
           return;
         }
+
         if (response.statusCode === 502) {
-          if (!retryCount || retryCount < 5) {
-            setTimeout(function() {
-              finished -= 1;
-              var retryAttempt = (retryCount || 0) + 1;
-              console.warn('retrying link ' + name + '; Retry attempt: ' + retryAttempt);
-              downloadOne(name, retryAttempt);
-            }, 1000);
-            return;
-          }
+          if(retry()) return;
         }
 
         var message = '!!! status code ' + response.statusCode + ' for ' + link;
@@ -118,7 +114,22 @@ function download(chunk, chunkDone) {
       allRecords.push(record);
 
       reportIfDone();
+
     });
+  }
+
+  function retry() {
+    if (!retryCount || retryCount < 5) {
+      setTimeout(function() {
+        finished -= 1;
+        var retryAttempt = (retryCount || 0) + 1;
+        console.warn('retrying link ' + name + '; Retry attempt: ' + retryAttempt);
+        downloadOne(name, retryAttempt);
+      }, 1000 * retryAttempt);
+      return true;;
+    }
+
+    return false;
   }
 
   function reportIfDone() {
