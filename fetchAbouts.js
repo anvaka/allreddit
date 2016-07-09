@@ -70,7 +70,9 @@ function download(chunk, chunkDone) {
   var finished = 0;
   var allRecords = [];
 
-  chunk.forEach(downloadOne)
+  chunk.forEach(function(name) {
+    downloadOne(name);
+  });
 
   function downloadOne(name, retryCount) {
     if (seen.has('/r/' + name + '/')) {
@@ -86,7 +88,7 @@ function download(chunk, chunkDone) {
       finished += 1;
       if (err) {
         if (err.code === 'ETIMEDOUT') {
-          if(retry()) return;
+          if (retry()) return;
         }
         console.error('!!!', err);
         throw new Error('Failed to download ' + link);
@@ -98,8 +100,8 @@ function download(chunk, chunkDone) {
           return;
         }
 
-        if (response.statusCode === 502) {
-          if(retry()) return;
+        if (response.statusCode === 502 || response.statusCode === 503) {
+          if (retry()) return;
         }
 
         var message = '!!! status code ' + response.statusCode + ' for ' + link;
@@ -116,20 +118,25 @@ function download(chunk, chunkDone) {
       reportIfDone();
 
     });
-  }
 
-  function retry() {
-    if (!retryCount || retryCount < 5) {
+    function retry() {
+      console.log('retrying. Current retryCount: ' + retryCount);
+      if (typeof retryCount === 'number' && retryCount > 5) {
+        console.log('no more retries');
+        return false; // no more retries. We failed too many times
+      }
+
+      var retryAttempt = (retryCount || 0) + 1;
+
+      console.log('sceduling retry attempt', retryAttempt);
       setTimeout(function() {
         finished -= 1;
-        var retryAttempt = (retryCount || 0) + 1;
         console.warn('retrying link ' + name + '; Retry attempt: ' + retryAttempt);
         downloadOne(name, retryAttempt);
       }, 1000 * retryAttempt);
-      return true;;
-    }
 
-    return false;
+      return true; // yes, one more chance please
+    }
   }
 
   function reportIfDone() {
@@ -175,5 +182,6 @@ function createOutStream(outFileName) {
 }
 
 function ignoreCode(code) {
-  return code === 403;
+  return code === 403 || // forbidden
+    code === 404; // not found
 }
