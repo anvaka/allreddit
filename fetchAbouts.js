@@ -10,7 +10,7 @@ var outgoing = createOutStream(outFileName);
 
 var fs = require('fs');
 var lines = fs.readFileSync(fileName).toString().split('\n');
-var from = 0;
+var from = 0; // you can change this
 var pageSize = 2;
 
 readProcessedFile(outFileName, downloadNexChunk);
@@ -100,7 +100,8 @@ function download(chunk, chunkDone) {
           return;
         }
 
-        if (response.statusCode === 502 || response.statusCode === 503) {
+        if (response.statusCode === 502 || response.statusCode === 503 ||
+           response.statusCode === 520) {
           if (retry()) return;
         }
 
