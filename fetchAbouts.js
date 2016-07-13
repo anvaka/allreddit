@@ -12,6 +12,8 @@ var fs = require('fs');
 var lines = fs.readFileSync(fileName).toString().split('\n');
 var from = 0; // you can change this
 var pageSize = 2;
+var linkRe = /\/r\/([a-zA-Z0-9_:-]+)/g;
+var urlRe = /\/r\/([a-zA-Z0-9_:-]+)/;
 
 readProcessedFile(outFileName, downloadNexChunk);
 
@@ -75,7 +77,7 @@ function download(chunk, chunkDone) {
   });
 
   function downloadOne(name, retryCount) {
-    if (seen.has('/r/' + name + '/')) {
+    if (seen.has(name)) {
       finished += 1;
       reportIfDone();
       return;
@@ -100,8 +102,7 @@ function download(chunk, chunkDone) {
           return;
         }
 
-        if (response.statusCode === 502 || response.statusCode === 503 ||
-           response.statusCode === 520) {
+        if (response.statusCode === 502 || response.statusCode === 503 || response.statusCode === 520) {
           if (retry()) return;
         }
 
@@ -117,7 +118,6 @@ function download(chunk, chunkDone) {
       allRecords.push(record);
 
       reportIfDone();
-
     });
 
     function retry() {
@@ -148,8 +148,13 @@ function download(chunk, chunkDone) {
 }
 
 function parseRecord(data) {
+  var urlMatch = data.url.match(urlRe);
+  if (!urlMatch) {
+    throw new Error('Cannot parse url: ' + data.url);
+  }
+
   var parsed = {
-    url: data.url,
+    url: urlMatch[1],
     created: data.created,
     subscribers: data.subscribers
   };
@@ -161,7 +166,6 @@ function parseRecord(data) {
 
 function getLinks(description) {
   if (!description) return;
-  var linkRe = /\/r\/([a-zA-Z0-9_-]+)/g;
 
   var match;
   var links = new Set();

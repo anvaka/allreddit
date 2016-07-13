@@ -47,7 +47,8 @@ function getAllSiteMaps(callback) {
 
   function parseRootSitemap(stringBuffer) {
     var content = stringBuffer.toString();
-    while(var match = siteMapRe.exec(content)) {
+    var match;
+    while(match = siteMapRe.exec(content)) {
       all.push(match[1]);
     }
 
