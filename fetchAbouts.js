@@ -152,25 +152,31 @@ function parseRecord(data) {
   if (!urlMatch) {
     throw new Error('Cannot parse url: ' + data.url);
   }
+  var subName = urlMatch[1];
 
   var parsed = {
-    url: urlMatch[1],
+    url: subName,
     created: data.created,
     subscribers: data.subscribers
   };
-  var links = getLinks(data.description);
+  var links = getLinks(subName, data.description);
   if (links && links.length) parsed.links = links;
 
   return parsed;
 }
 
-function getLinks(description) {
+function getLinks(subName, description) {
   if (!description) return;
 
   var match;
   var links = new Set();
   while(match = linkRe.exec(description)) {
-    links.add(match[1]);
+    // it's common to have the same subreddit have itself in description. Ignore those.
+    var sameName = (subName.toUpperCase() === match[1].toUpperCase());
+
+    if (!sameName) {
+      links.add(match[1]);
+    }
   }
 
   return Array.from(links);
