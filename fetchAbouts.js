@@ -113,6 +113,16 @@ function download(name, downloadComplete) {
       }
 
       var json = JSON.parse(body);
+      if (!json.data) {
+        throw new Error('Missing data for: ' + body + '; Link: ' + link);
+      }
+
+      if (json.kind !== 't5') {
+        console.warn('Skipping ' + link + ' - it is not a subreddit');
+        downloadComplete();
+        return;
+      }
+
       var record = parseRecord(json.data);
       downloadComplete(record);
     });
