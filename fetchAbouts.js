@@ -11,31 +11,33 @@ var outgoing = createOutStream(outFileName);
 var fs = require('fs');
 var lines = fs.readFileSync(fileName).toString().split('\n');
 var from = 0; // you can change this
-var pageSize = 2;
+var activeRequests = 0;
+var maxConcurrent = 2;
 var linkRe = /\/r\/([a-zA-Z0-9_:-]+)/g;
 var urlRe = /\/r\/([a-zA-Z0-9_:-]+)/;
 
-readProcessedFile(outFileName, downloadNexChunk);
+readProcessedFile(outFileName, downloadNext);
 
-function downloadNexChunk() {
-  var to = from + pageSize;
-  var chunk = lines.slice(from, to);
+function downloadNext() {
+  activeRequests += 1;
 
-  console.warn('Processing from index ' + from);
-  if (chunk.length > 0) {
-    download(chunk, save)
-  }
+  download(lines[from], save)
+  from += 1;
+  scheduleNext();
 
   function save(json) {
-    json.forEach(function(record) {
-      outgoing.write(record);
-    })
+    activeRequests -= 1;
+    if (json) {
+      outgoing.write(json);
+      seen.add(json.url);
+    }
+    scheduleNext();
+  }
 
-    from = to;
-
-    if (from < lines.length) {
-      downloadNexChunk();
-    } else {
+  function scheduleNext() {
+    if (from < lines.length && activeRequests < maxConcurrent) {
+      setTimeout(downloadNext, 0);
+    } else if (from >= lines.length) {
       console.log('all done');
     }
   }
@@ -59,6 +61,9 @@ function readProcessedFile(fileName, done) {
 
   function markProcessed(record) {
     processedRows += 1;
+    if (seen.has(record.url)) {
+      console.log('Wow, this record appears more than one time: ', record.url);
+    }
     seen.add(record.url);
   }
 
@@ -68,26 +73,20 @@ function readProcessedFile(fileName, done) {
   }
 }
 
-function download(chunk, chunkDone) {
-  var finished = 0;
-  var allRecords = [];
+function download(name, downloadComplete) {
+  if (seen.has(name)) {
+    setTimeout(downloadComplete, 0);
+    return;
+  }
 
-  chunk.forEach(function(name) {
-    downloadOne(name);
-  });
+  downloadOne(name);
+  return;
 
   function downloadOne(name, retryCount) {
-    if (seen.has(name)) {
-      finished += 1;
-      reportIfDone();
-      return;
-    }
-
     var link = 'https://www.reddit.com/r/' + name + '/about.json';
-    console.warn('downloading ' + link);
+    console.warn(from + '. Downloading ' + link);
 
     request(link, function(err, response, body) {
-      finished += 1;
       if (err) {
         if (err.code === 'ETIMEDOUT') {
           if (retry()) return;
@@ -98,7 +97,7 @@ function download(chunk, chunkDone) {
       if (response.statusCode !== 200) {
         if (ignoreCode(response.statusCode)) {
           console.warn('ignoring ' + link + ' since it was returned with status code: ' + response.statusCode);
-          reportIfDone();
+          downloadComplete();
           return;
         }
 
@@ -115,9 +114,7 @@ function download(chunk, chunkDone) {
 
       var json = JSON.parse(body);
       var record = parseRecord(json.data);
-      allRecords.push(record);
-
-      reportIfDone();
+      downloadComplete(record);
     });
 
     function retry() {
@@ -131,19 +128,12 @@ function download(chunk, chunkDone) {
 
       console.log('sceduling retry attempt', retryAttempt);
       setTimeout(function() {
-        finished -= 1;
         console.warn('retrying link ' + name + '; Retry attempt: ' + retryAttempt);
         downloadOne(name, retryAttempt);
       }, 1000 * retryAttempt);
 
       return true; // yes, one more chance please
     }
-  }
-
-  function reportIfDone() {
-      if (finished === chunk.length) {
-        setTimeout(chunkDone, 0, allRecords);
-      }
   }
 }
 

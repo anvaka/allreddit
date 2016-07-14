@@ -14,11 +14,15 @@ function downloadEachSitemap(sitemaps) {
   sitemaps.forEach(downloadOneSitemap);
 
   function downloadOneSitemap(link) {
-    request(link, { encoding: null })
-      .pipe(zlib.createGunzip())
-      .pipe(concat(function(stringBuffer) {
-        parseSitemapFile(stringBuffer, link);
-      }));
+    if (link.endsWith('.xml')) {
+      request(link, { encoding: null })
+        .pipe(zlib.createGunzip())
+        .pipe(concat(function(stringBuffer) {
+          parseSitemapFile(stringBuffer, link);
+        }));
+    } else {
+      console.warn('Unrcognized link: ' + link + '; Ignoring')
+    }
   }
 
   function parseSitemapFile(stringBuffer, fileName) {
